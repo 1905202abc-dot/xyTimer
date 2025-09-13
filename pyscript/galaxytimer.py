@@ -49,9 +49,9 @@ if __name__ == '__main__':
     # core_oprate.Initialize()
 
     # 源码热更新
-    if not sys.argv[0].endswith('.exe'):
-        from filereload import filewatch
-        filewatch.StartReload(os.getcwd())
+    # if not sys.argv[0].endswith('.exe'):
+    #     from filereload import filewatch
+    #     filewatch.StartReload(os.getcwd())
 
     # 创建主窗口
     app = QApplication(sys.argv)
