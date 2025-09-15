@@ -38,7 +38,6 @@ if __name__ == '__main__':
     from core import core_timer
     from core import core_voice
     from core import core_event
-    # from core import core_oprate
     # 加载资源
     from widgets._rc import resource  # noqa
 
@@ -46,7 +45,6 @@ if __name__ == '__main__':
     core_timer.Initialize()
     core_voice.Initialize()
     core_event.Initialize()
-    # core_oprate.Initialize()
 
     # 源码热更新
     # if not sys.argv[0].endswith('.exe'):
