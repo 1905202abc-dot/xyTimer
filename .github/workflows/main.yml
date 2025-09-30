@@ -24,45 +24,47 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install pyinstaller PySide6 pycryptodome
-        # 如果有 requirements.txt 则安装
-        if exist requirements.txt pip install -r requirements.txt
+        # 修复的 requirements.txt 检查语法
+        if (Test-Path requirements.txt) { pip install -r requirements.txt }
 
     - name: Create PySide6 hook
       run: |
         mkdir hooks
-        echo "from PyInstaller.utils.hooks import collect_data_files, collect_submodules" > hooks/hook-PySide6.py
-        echo "datas = collect_data_files('PySide6')" >> hooks/hook-PySide6.py
-        echo "hiddenimports = collect_submodules('PySide6')" >> hooks/hook-PySide6.py
+        # 使用 PowerShell 语法创建 hook 文件
+        @"
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
+
+datas = collect_data_files('PySide6')
+hiddenimports = collect_submodules('PySide6')
+"@ | Out-File -Encoding utf8 hooks/hook-PySide6.py
 
     - name: Run Pack Script with obfuscation
       run: |
         # 确保输出目录存在
-        if not exist dist mkdir dist
+        if (-not (Test-Path dist)) { mkdir dist }
         
         # 使用混淆和加盐打包
-        pyinstaller --onefile --name=GalaxyTimer ^
-                    --distpath=dist ^
-                    --workpath=build ^
-                    --additional-hooks-dir=hooks ^
-                    --key $env:SALT_VALUE ^  # 使用盐值进行混淆
+        pyinstaller --onefile --name=GalaxyTimer `
+                    --distpath=dist `
+                    --workpath=build `
+                    --additional-hooks-dir=hooks `
+                    --key $env:SALT_VALUE `  # 使用盐值进行混淆
                     pyscript/main.py
         
         # 检查生成的文件
-        if exist dist\GalaxyTimer.exe (
-            echo "Executable created successfully"
-        ) else (
-            echo "Error: Executable not found"
+        if (Test-Path dist\GalaxyTimer.exe) {
+            Write-Host "Executable created successfully"
+        } else {
+            Write-Host "Error: Executable not found"
             exit 1
-        )
+        }
 
     - name: Debug - List files
       run: |
-        echo "Current directory:"
-        cd
-        echo "Dist directory contents:"
-        if exist dist ( dir dist )
-        echo "Root directory executables:"
-        dir *.exe
+        Write-Host "Current directory:"
+        Get-ChildItem
+        Write-Host "Dist directory contents:"
+        if (Test-Path dist) { Get-ChildItem dist }
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
