@@ -22,22 +22,9 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install pyinstaller PySide6
-        # 如果有其他依赖，添加到 requirements.txt 或直接安装
-
-    - name: Debug - List installed packages
-      run: pip list
 
     - name: Build with PyInstaller
-      run: |
-        pyinstaller --name=GalaxyTimer ^
-                   --onefile ^
-                   --windowed ^
-                   --hidden-import=PySide6 ^
-                   --hidden-import=PySide6.QtCore ^
-                   --hidden-import=PySide6.QtGui ^
-                   --hidden-import=PySide6.QtWidgets ^
-                   --collect-all=PySide6 ^
-                   galaxytimer.py
+      run: pyinstaller --name=GalaxyTimer --onefile --windowed --hidden-import=PySide6 --hidden-import=PySide6.QtCore --hidden-import=PySide6.QtGui --hidden-import=PySide6.QtWidgets --collect-all=PySide6 galaxytimer.py
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
