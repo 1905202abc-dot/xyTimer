@@ -1,33 +1,51 @@
-name: Build Executable
+name: Build Timer with Custom Salt
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:  # 允许手动触发
 
 jobs:
   build:
-    runs-on: windows-latest
-
+    runs-on: windows-latest  # 使用 Windows 环境打包 EXE
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-
+      
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
-
+        python-version: '3.10'
+        
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pyinstaller PySide6
-
+        pip install -r requirements.txt
+        # 安装打包工具
+        pip install pyinstaller
+        # 添加其他必要的依赖
+        
+    - name: Apply custom salt
+      run: |
+        # 这里是从 Secrets 读取盐值并应用到代码的逻辑
+        # 假设我们有一个脚本 apply_salt.py 来处理这个
+        python apply_salt.py "${{ secrets.CUSTOM_SALT }}"
+      env:
+        CUSTOM_SALT: ${{ secrets.CUSTOM_SALT }}
+        
     - name: Build with PyInstaller
-      run: pyinstaller --name=GalaxyTimer --onefile --windowed --hidden-import=PySide6 --hidden-import=PySide6.QtCore --hidden-import=PySide6.QtGui --hidden-import=PySide6.QtWidgets --collect-all=PySide6 pyscript/galaxytimer.py
-
-    - name: Upload Artifact
+      run: |
+        # 使用 PyInstaller 打包，假设有 spec 文件或直接命令
+        pyinstaller --onefile --windowed --name="MyTimer" main.py
+        # 或者使用 spec 文件
+        # pyinstaller timer.spec
+        
+    - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: timer-executable
-        path: dist/GalaxyTimer.exe
+        path: dist/*.exe
+        retention-days: 30
