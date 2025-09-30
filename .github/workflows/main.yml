@@ -128,7 +128,7 @@ hiddenimports = collect_submodules('PySide6')
       uses: actions/upload-artifact@v4
       with:
         name: galaxy-timer-${{ github.sha }}
-        path: dist/GalaxyTimer.exe
+        path: dist/GalaxyTimer.exe  # 修复：移除了多余的中文句号
         retention-days: 7
 
     - name: Create Release on Tag
