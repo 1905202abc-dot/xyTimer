@@ -34,5 +34,5 @@ jobs: # 定义工作流中的任务
       uses: actions/upload-artifact@v4
       with:
         name: timer-executable # Artifact 的名称
-        path: dist/*.exe # 假设打包好的 exe 在 dist 文件夹下
-        # 根据你的实际打包输出路径修改
+        path: GalaxyTimer.exe  # 直接上传根目录下的文件
+        
