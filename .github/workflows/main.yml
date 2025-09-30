@@ -1,4 +1,4 @@
-name: Build Executable
+name: Build GalaxyTimer Executable
 
 on:
   push:
@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      SALT_VALUE: ${{ secrets.OBFUSCATION_SALT }}  # 从 Secrets 获取盐值
 
     steps:
     - name: Checkout code
@@ -21,8 +23,9 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pyinstaller PySide6
-        # 安装其他必要包
+        pip install pyinstaller PySide6 pycryptodome
+        # 如果有 requirements.txt 则安装
+        if exist requirements.txt pip install -r requirements.txt
 
     - name: Create PySide6 hook
       run: |
@@ -31,14 +34,38 @@ jobs:
         echo "datas = collect_data_files('PySide6')" >> hooks/hook-PySide6.py
         echo "hiddenimports = collect_submodules('PySide6')" >> hooks/hook-PySide6.py
 
-    - name: Build with PyInstaller
+    - name: Run Pack Script with obfuscation
       run: |
+        # 确保输出目录存在
+        if not exist dist mkdir dist
+        
+        # 使用混淆和加盐打包
         pyinstaller --onefile --name=GalaxyTimer ^
+                    --distpath=dist ^
+                    --workpath=build ^
                     --additional-hooks-dir=hooks ^
+                    --key $env:SALT_VALUE ^  # 使用盐值进行混淆
                     pyscript/main.py
+        
+        # 检查生成的文件
+        if exist dist\GalaxyTimer.exe (
+            echo "Executable created successfully"
+        ) else (
+            echo "Error: Executable not found"
+            exit 1
+        )
+
+    - name: Debug - List files
+      run: |
+        echo "Current directory:"
+        cd
+        echo "Dist directory contents:"
+        if exist dist ( dir dist )
+        echo "Root directory executables:"
+        dir *.exe
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: galaxy-timer
-        path: GalaxyTimer.exe
+        path: dist/GalaxyTimer.exe  # 明确指定文件路径
