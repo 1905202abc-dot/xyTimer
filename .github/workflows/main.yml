@@ -18,12 +18,10 @@ jobs: # 定义工作流中的任务
       with:
         python-version: '3.11' # 指定你项目需要的 Python 版本
 
-    - name: Install dependencies # 步骤3：安装依赖
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt # 假设你有 requirements.txt
-        # 或者直接安装需要的包，例如：
-        # pip install pyinstaller obfuscation-library
+    - name: Install dependencies
+    run: |
+    python -m pip install --upgrade pip
+    # 完全删除 pip install -r requirements.txt 这行
 
     - name: Run Pack Script # 步骤4：执行你的打包脚本 (例如 pack.bat)
       run: .\pack.bat # 或者调用具体的 Python 混淆和打包命令
