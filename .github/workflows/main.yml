@@ -1,143 +1,46 @@
-name: Build GalaxyTimer Executable
+name: Build Executable
 
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
-    inputs:
-      salt_override:
-        description: 'Override salt value (optional)'
-        required: false
 
 jobs:
   build:
     runs-on: windows-latest
-    env:
-      SALT_VALUE: ${{ secrets.OBFUSCATION_SALT || github.event.inputs.salt_override || 'default_salt_123' }}
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-        
-    - name: Validate environment
-      run: |
-        Write-Host "Python version:"
-        python --version
-        Write-Host "Salt value (first 8 chars): $($env:SALT_VALUE.Substring(0, [Math]::Min(8, $env:SALT_VALUE.Length)))..."
-        if ($env:SALT_VALUE -eq "default_salt_123") {
-          Write-Warning "Using default salt value - consider setting OBFUSCATION_SALT secret"
-        }
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pyinstaller PySide6 pycryptodome
-        
-        # 更健壮的需求文件检查
-        if (Test-Path "requirements.txt") {
-          Write-Host "Installing from requirements.txt"
-          pip install -r requirements.txt
-        } else {
-          Write-Host "No requirements.txt found, skipping"
-        }
+        pip install pyinstaller PySide6
+        # 如果有其他依赖，添加到 requirements.txt 或直接安装
 
-    - name: Create PySide6 hook
+    - name: Debug - List installed packages
+      run: pip list
+
+    - name: Build with PyInstaller
       run: |
-        # 确保 hooks 目录存在
-        if (!(Test-Path "hooks")) {
-          New-Item -ItemType Directory -Path "hooks" -Force
-        }
-        
-        # 创建更完整的 hook 文件
-        @"
-from PyInstaller.utils.hooks import collect_data_files, collect_submodules
-
-datas = collect_data_files('PySide6', include_py_files=True)
-hiddenimports = collect_submodules('PySide6')
-"@ | Out-File -Encoding utf8 "hooks/hook-PySide6.py"
-
-        Write-Host "PySide6 hook created successfully"
-
-    - name: Verify main.py exists
-      run: |
-        if (!(Test-Path "pyscript/main.py")) {
-          Write-Error "Main script not found at pyscript/main.py"
-          exit 1
-        }
-        Write-Host "Main script found: pyscript/main.py"
-
-    - name: Run Pack Script with obfuscation
-      run: |
-        # 清理之前的构建
-        if (Test-Path "dist") { Remove-Item -Recurse -Force "dist" }
-        if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
-        
-        # 创建必要的目录
-        New-Item -ItemType Directory -Path "dist" -Force
-        New-Item -ItemType Directory -Path "build" -Force
-        
-        Write-Host "Starting PyInstaller build with salt obfuscation..."
-        
-        # 完整的 PyInstaller 命令
-        pyinstaller --onefile `
-                    --name=GalaxyTimer `
-                    --distpath=dist `
-                    --workpath=build `
-                    --specpath=build `
-                    --additional-hooks-dir=hooks `
-                    --key $env:SALT_VALUE `
-                    --clean `
-                    --noconfirm `
-                    pyscript/main.py
-        
-        # 验证构建结果
-        if (Test-Path "dist\GalaxyTimer.exe") {
-          $file = Get-Item "dist\GalaxyTimer.exe"
-          Write-Host "✅ Executable created successfully: $($file.Name)"
-          Write-Host "📁 File size: $([math]::Round($file.Length/1MB, 2)) MB"
-          Write-Host "📅 Created: $($file.CreationTime)"
-        } else {
-          Write-Error "❌ Executable not found after build"
-          exit 1
-        }
-
-    - name: Debug - List files
-      if: always()  # 即使构建失败也显示调试信息
-      run: |
-        Write-Host "=== Current Directory Structure ==="
-        Get-ChildItem -Recurse | Format-Table Name, Length, LastWriteTime -AutoSize
-        
-        Write-Host "=== Dist Directory ==="
-        if (Test-Path "dist") { 
-          Get-ChildItem "dist" -Recurse | Format-Table FullName, Length, LastWriteTime -AutoSize
-        }
-        
-        Write-Host "=== Build Directory ==="
-        if (Test-Path "build") { 
-          Get-ChildItem "build" -Recurse | Select-Object -First 10 | Format-Table Name
-        }
+        pyinstaller --name=GalaxyTimer ^
+                   --onefile ^
+                   --windowed ^
+                   --hidden-import=PySide6 ^
+                   --hidden-import=PySide6.QtCore ^
+                   --hidden-import=PySide6.QtGui ^
+                   --hidden-import=PySide6.QtWidgets ^
+                   --collect-all=PySide6 ^
+                   galaxytimer.py
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: galaxy-timer-${{ github.sha }}
-        path: dist/GalaxyTimer.exe  # 修复：移除了多余的中文句号
-        retention-days: 7
-
-    - name: Create Release on Tag
-      if: startsWith(github.ref, 'refs/tags/')
-      uses: softprops/action-gh-release@v1
-      with:
-        files: dist/GalaxyTimer.exe
-        body: |
-          Auto-built GalaxyTimer executable
-          - Commit: ${{ github.sha }}
-          - Build date: ${{ fromJSON('["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]')[github.event.repository.updated_at.getMonth()] }} ${{ github.event.repository.updated_at.getDate() }}, ${{ github.event.repository.updated_at.getFullYear() }}
-          - Salt: ${{ env.SALT_VALUE != 'default_salt_123' && '***' || 'default' }}
+        name: timer-executable
+        path: dist/GalaxyTimer.exe
