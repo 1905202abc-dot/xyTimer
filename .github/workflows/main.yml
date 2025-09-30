@@ -1,0 +1,38 @@
+name: Build Executable # 工作流的名称，显示在 Actions 标签页
+
+on: # 触发工作流的条件
+  push: # 当有代码推送到仓库时触发
+    branches: [ main ] # 只监听 main 分支的推送
+  workflow_dispatch: # 允许在 GitHub 网页上手动触发
+
+jobs: # 定义工作流中的任务
+  build: # 任务 ID
+    runs-on: windows-latest # 在 GitHub 提供的 Windows 最新版虚拟机上运行（因为要打包 exe）
+
+    steps: # 定义任务中的步骤
+    - name: Checkout code # 步骤1：检出仓库代码
+      uses: actions/checkout@v4 # 使用官方的 checkout action
+
+    - name: Set up Python # 步骤2：设置 Python 环境
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11' # 指定你项目需要的 Python 版本
+
+    - name: Install dependencies # 步骤3：安装依赖
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt # 假设你有 requirements.txt
+        # 或者直接安装需要的包，例如：
+        # pip install pyinstaller obfuscation-library
+
+    - name: Run Pack Script # 步骤4：执行你的打包脚本 (例如 pack.bat)
+      run: .\pack.bat # 或者调用具体的 Python 混淆和打包命令
+      # 如果 pack.bat 需要参数（如盐值），这里可以添加
+      # 环境变量或 Secrets 可以通过 `env:` 或 `${{ secrets.MY_SECRET }}` 传入
+
+    - name: Upload Artifact # 步骤5：上传打包好的文件作为 Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: timer-executable # Artifact 的名称
+        path: dist/*.exe # 假设打包好的 exe 在 dist 文件夹下
+        # 根据你的实际打包输出路径修改
