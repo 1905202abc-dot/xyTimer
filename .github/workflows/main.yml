@@ -9,7 +9,7 @@ jobs:
   build:
     runs-on: windows-latest
     env:
-      SALT_VALUE: ${{ secrets.OBFUSCATION_SALT }}  # 从 Secrets 获取盐值
+      SALT_VALUE: ${{ secrets.OBFUSCATION_SALT }}
 
     steps:
     - name: Checkout code
@@ -30,25 +30,22 @@ jobs:
     - name: Create PySide6 hook
       run: |
         mkdir hooks
-        # 使用 PowerShell 语法创建 hook 文件
-        @"
-from PyInstaller.utils.hooks import collect_data_files, collect_submodules
-
-datas = collect_data_files('PySide6')
-hiddenimports = collect_submodules('PySide6')
-"@ | Out-File -Encoding utf8 hooks/hook-PySide6.py
+        # 使用 PowerShell 创建 hook 文件
+        "from PyInstaller.utils.hooks import collect_data_files, collect_submodules" | Out-File -Encoding utf8 hooks/hook-PySide6.py
+        "datas = collect_data_files('PySide6')" | Out-File -Encoding utf8 -Append hooks/hook-PySide6.py
+        "hiddenimports = collect_submodules('PySide6')" | Out-File -Encoding utf8 -Append hooks/hook-PySide6.py
 
     - name: Run Pack Script with obfuscation
       run: |
         # 确保输出目录存在
-        if (-not (Test-Path dist)) { mkdir dist }
+        if (!(Test-Path dist)) { mkdir dist }
         
         # 使用混淆和加盐打包
         pyinstaller --onefile --name=GalaxyTimer `
                     --distpath=dist `
                     --workpath=build `
                     --additional-hooks-dir=hooks `
-                    --key $env:SALT_VALUE `  # 使用盐值进行混淆
+                    --key $env:SALT_VALUE `
                     pyscript/main.py
         
         # 检查生成的文件
@@ -62,6 +59,8 @@ hiddenimports = collect_submodules('PySide6')
     - name: Debug - List files
       run: |
         Write-Host "Current directory:"
+        Get-Location
+        Write-Host "Files in current directory:"
         Get-ChildItem
         Write-Host "Dist directory contents:"
         if (Test-Path dist) { Get-ChildItem dist }
@@ -70,4 +69,4 @@ hiddenimports = collect_submodules('PySide6')
       uses: actions/upload-artifact@v4
       with:
         name: galaxy-timer
-        path: dist/GalaxyTimer.exe  # 明确指定文件路径
+        path: dist/GalaxyTimer.exe
